@@ -1,0 +1,40 @@
+<h1>Centro de Mesajes</h1>	
+
+<input type="email" name="email" id="email" placeholder="nombre@email.com"/>	
+<div id="messages"></div>	
+
+<form id="message-form">	
+  <input type="text" name="message" id="message" placeholder="Ingresá un mensaje..."/>	
+  <button type="submit" name="send" id="send">Enviar</button>	
+</form>	
+
+
+<script type="text/javascript">	
+  var socket = io();	
+  const form = document.getElementById("message-form");	
+  form.addEventListener("submit", function(e){	
+    e.preventDefault();	
+    const emailValue = document.getElementById("email").value;	
+    const messageValue = document.getElementById("message").value;	
+    if(emailValue !== "" && messageValue !== ""){	
+      const now = new Date();	
+      const messsage = {	
+        email: emailValue,	
+        message: messageValue,	
+        datetime: `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`,	
+      }	
+      socket.emit("new-message", messsage);	
+    }	
+    return false;	
+  });	
+  socket.on('messages', (productos) => {	
+    const vistaProductos = document.getElementById('messages');	
+    fetch('/messages')	
+    .then(res => res.text())	
+    .then(vista => {	
+      vistaProductos.innerHTML = vista	
+    })	
+  })	
+</script>	
+
+<a href="/">Home</a>
