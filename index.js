@@ -2,6 +2,13 @@ import express from "express";
 import { engine } from "express-handlebars";
 import http from "http";
 import { Server as IOServer } from "socket.io";
+import { faker } from '@faker-js/faker';
+import normalizr from 'normalizr';
+import util from "util";
+
+const schema = normalizr.schema;
+const normalize = normalizr.normalize;
+
 import { messageRepository } from "./src/db/messages.js";
 import { productosRepository } from "./src/db/productos.js";
 
@@ -21,6 +28,18 @@ app.get("/", (req, res) => {
 app.get("/message-center", (req, res) => {
   res.render("message-center");
 });
+app.get("/productos-test", (req, res) => {
+  let productos = []
+  for (let i = 0; i < 5; i++) {
+    const producto = {
+      title: faker.commerce.productName(),
+      price: faker.commerce.price(),
+      thumbnail: faker.image.imageUrl(640, 480, 'commerce', true),
+    }
+    productos.push(producto)
+  }
+  res.render("productos-test",{ productos, tieneProductos: productos.length > 0});
+});
 
 app.get("/productos", async(req, res) => {
   try {
@@ -32,8 +51,22 @@ app.get("/productos", async(req, res) => {
 });
 app.get("/messages", async (req, res) => {
   try {
-    const messages = await messageRepository.getAll();
-    res.render("messages", { messages, hasMessages: messages.length > 0 });
+    const parsedMessages = await messageRepository.getAll();
+    const authorSchema = new schema.Entity("author", {}, { idAttribute: "email"});
+    const message = new schema.Entity('messages', {
+        author: authorSchema,
+    });
+    const messageSchema = { messages: [message] };
+    const data = { messages: parsedMessages}
+    const normalizedMessages = normalize(data, messageSchema);
+
+    const normalSize = Buffer.from(JSON.stringify(util.inspect(parsedMessages), true, 12, true)).length
+    const newSize = Buffer.from(JSON.stringify(util.inspect(normalizedMessages), true, 12, true)).length
+
+    res.send({
+      messages: normalizedMessages,
+      compression: newSize / normalSize,
+    });
   } catch (err) {
     res.send.status(404);
   }
@@ -70,7 +103,7 @@ const initServer = async () => {
 };
 
 const bootstrap = async () => {
-  await messageRepository.createTable();
+  await messageRepository.initFile();
   await productosRepository.createTable();
 
   await initServer();
