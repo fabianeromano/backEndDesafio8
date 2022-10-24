@@ -49,9 +49,9 @@ app.get("/productos", async(req, res) => {
   res.send.status(404);
 }
 });
-app.get("/messages", async (req, res) => {
+app.get("/messages", (req, res) => {
   try {
-    const parsedMessages = await messageRepository.getAll();
+    const parsedMessages = messageRepository.getAll();
     const authorSchema = new schema.Entity("author", {}, { idAttribute: "email"});
     const message = new schema.Entity('messages', {
         author: authorSchema,
@@ -85,7 +85,7 @@ const initServer = async () => {
     const productos = await productosRepository.getAll();
     socket.emit("productos", productos);
 
-    const messages = await messageRepository.getAll();
+    const messages = messageRepository.getAll();
     socket.emit("messages", messages);
 
     socket.on("new-product", async (data) => {
@@ -95,15 +95,15 @@ const initServer = async () => {
     });
     
     socket.on("new-message", async (data) => {
-      await messageRepository.save(data);
-      const messages = await messageRepository.getAll();
+      messageRepository.save(data);
+      const messages = messageRepository.getAll();
       io.sockets.emit("messages", messages);
     });
   });
 };
 
 const bootstrap = async () => {
-  await messageRepository.initFile();
+  messageRepository.initFile();
   await productosRepository.createTable();
 
   await initServer();
